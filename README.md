@@ -63,7 +63,9 @@ De database wordt **automatisch aangemaakt** via `Backend/sql/developmentdb.sql`
 
 **Probleemoplossing database**
 
-Als de database al eerder is geïnitialiseerd (bijv. zonder de nieuwste wijzigingen in `sql/developmentdb.sql`), dan worden latere aanpassingen in dat SQL-bestand niet automatisch toegepast. Om de database opnieuw te laten initialiseren, verwijder de Docker volume en start de services opnieuw:
+Als de database al eerder is geïnitialiseerd (bijv. zonder de nieuwste wijzigingen in `sql/developmentdb.sql`), dan worden latere aanpassingen in dat SQL-bestand niet automatisch toegepast. Hierdoor kan de oude database-schema nog tabellen missen zoals `team_invitations` of kolommen zoals `team_members.role`, wat precies de fouten veroorzaakt die je docent zag.
+
+Om de database opnieuw te laten initialiseren, verwijder de Docker volume en start de services opnieuw:
 
 ```bash
 cd Backend
@@ -88,6 +90,55 @@ npm run dev
 Ga naar: **[http://localhost:5173](http://localhost:5173)**
 
 De backend API is bereikbaar op: **[http://localhost](http://localhost)** (poort 80 via nginx)
+
+---
+
+## Online deployment
+
+### GitHub Pages (frontend)
+
+1. Kopieer de voorbeeldomgeving:
+
+```bash
+cd Frontend
+copy .env.example .env
+```
+
+2. Open `Frontend/.env` en zet de backend-URL:
+
+```env
+VITE_API_URL=https://<your-backend>.onrender.com
+VITE_BASE_URL=./
+```
+
+3. Bouw de frontend en deploy naar GitHub Pages:
+
+```bash
+npm install
+npm run build
+npm run deploy
+```
+
+4. Controleer de GitHub Pages URL en zorg dat `VITE_API_URL` naar de Render-backend wijst.
+
+### Render.com (backend)
+
+Voor Render gebruik je de backend vanuit de `Backend` map.
+
+Render kan de backend als een Docker-webservice hosten. In je Render-dashboard moet je:
+
+- repository koppelen
+- root map instellen op `Backend`
+- deployen met de `Dockerfile` in `Backend`
+- een Managed MySQL-database aanmaken
+- de volgende environment variables instellen:
+  - `DB_HOST`
+  - `DB_USER`
+  - `DB_PASSWORD`
+  - `DB_NAME=developmentdb`
+  - `APP_URL=https://<your-backend>.onrender.com`
+
+> Als je Render gebruikt, zorg er dan voor dat de MySQL-volume lokaal opnieuw wordt opgebouwd als je later nieuwe database-schemawijzigingen test.
 
 ---
 

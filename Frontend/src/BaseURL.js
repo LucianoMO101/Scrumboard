@@ -1,7 +1,9 @@
 import axios from 'axios'
 
+const apiUrl = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
+
 const instance = axios.create({
-  baseURL: 'http://localhost/',
+  baseURL: apiUrl,
 })
 
 // Set default authorization header if token exists
