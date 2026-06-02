@@ -133,7 +133,7 @@ const fetchTeamMembers = async () => {
     const res = await axios.get(`/teams/${props.teamId}`)
     teamMembers.value = (res.data.data?.members || []).map((m) => ({
       user_id: m.user_id,
-      name: m.name || (m.firstname && m.lastname ? `${m.firstname} ${m.lastname}` : `User ${m.user_id}`),
+      name: m.name || (m.firstname && m.lastname ? `${m.firstname} ${m.lastname}` : m.email || `User ${m.user_id}`),
     }))
   } catch {
     // ignore

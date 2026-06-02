@@ -7,6 +7,25 @@ use DateTime;
 
 class UserRepository extends Repository {
 
+    public function __construct() {
+        parent::__construct();
+        $this->ensureUserSchema();
+    }
+
+    private function ensureUserSchema(): void {
+        try {
+            $columnQuery = $this->connection->query("SHOW COLUMNS FROM users LIKE 'default_team_id'");
+            if ($columnQuery && $columnQuery->rowCount() === 0) {
+                $this->connection->exec(
+                    "ALTER TABLE users ADD COLUMN default_team_id INT(11) NULL AFTER refresh_token, " .
+                    "ADD FOREIGN KEY (`default_team_id`) REFERENCES `teams` (`team_id`) ON DELETE SET NULL"
+                );
+            }
+        } catch (\PDOException $e) {
+            // If error, database might not be ready yet - ignore
+        }
+    }
+
     /* Get user by ID */
     public function getUserById(int $user_id): ?User {
         $query = $this->connection->prepare("SELECT * FROM users WHERE user_id = ?");
@@ -100,11 +119,22 @@ class UserRepository extends Repository {
     }
 
     /* Update default team for user */
-    public function updateDefaultTeam(int $user_id, int $team_id): bool {
-        $query = $this->connection->prepare("
-            UPDATE users SET default_team_id = ? WHERE user_id = ?
-        ");
-        return $query->execute([$team_id, $user_id]);
+    public function updateDefaultTeam(int $user_id, ?int $team_id): bool {
+        try {
+            $query = $this->connection->prepare("UPDATE users SET default_team_id = ? WHERE user_id = ?");
+            return $query->execute([$team_id, $user_id]);
+        } catch (\PDOException $e) {
+            // If column doesn't exist yet, try to add it
+            try {
+                $this->connection->exec(
+                    "ALTER TABLE users ADD COLUMN default_team_id INT(11) NULL AFTER refresh_token"
+                );
+                $query = $this->connection->prepare("UPDATE users SET default_team_id = ? WHERE user_id = ?");
+                return $query->execute([$team_id, $user_id]);
+            } catch (\PDOException $ex) {
+                return false;
+            }
+        }
     }
 
     /* Map database row to User object */

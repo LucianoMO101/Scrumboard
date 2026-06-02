@@ -7,6 +7,45 @@ use DateTime;
 
 class TeamRepository extends Repository {
 
+    public function __construct() {
+        parent::__construct();
+        $this->ensureTeamSchema();
+    }
+
+    private function ensureTeamSchema(): void {
+        try {
+            $columnQuery = $this->connection->query("SHOW COLUMNS FROM team_members LIKE 'role'");
+            if ($columnQuery && $columnQuery->rowCount() === 0) {
+                $this->connection->exec("ALTER TABLE team_members ADD COLUMN role ENUM('admin','member') NOT NULL DEFAULT 'member' AFTER user_id");
+            }
+        } catch (\PDOException $e) {
+            // If the table does not exist yet, do not stop initialization here.
+        }
+
+        try {
+            $tableQuery = $this->connection->query("SHOW TABLES LIKE 'team_invitations'");
+            if ($tableQuery && $tableQuery->rowCount() === 0) {
+                $this->connection->exec(
+                    "CREATE TABLE IF NOT EXISTS `team_invitations` (" .
+                    "`invitation_id` INT(11) NOT NULL AUTO_INCREMENT, " .
+                    "`team_id` INT(11) NOT NULL, " .
+                    "`invited_user_id` INT(11) NOT NULL, " .
+                    "`invited_by` INT(11) NOT NULL, " .
+                    "`status` ENUM('pending','accepted','declined') NOT NULL DEFAULT 'pending', " .
+                    "`created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " .
+                    "PRIMARY KEY (`invitation_id`), " .
+                    "FOREIGN KEY (`team_id`) REFERENCES `teams` (`team_id`) ON DELETE CASCADE, " .
+                    "FOREIGN KEY (`invited_user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE, " .
+                    "FOREIGN KEY (`invited_by`) REFERENCES `users` (`user_id`) ON DELETE CASCADE, " .
+                    "INDEX `idx_invited_user` (`invited_user_id`)" .
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+                );
+            }
+        } catch (\PDOException $e) {
+            // Ignore startup schema repair errors if the database is not yet initialized.
+        }
+    }
+
     /* Get team by ID */
     public function getTeamById(int $team_id): ?Team {
         $query = $this->connection->prepare("SELECT * FROM teams WHERE team_id = ?");
@@ -114,13 +153,18 @@ class TeamRepository extends Repository {
     /* Get all team members with their role */
     public function getTeamMembersWithRoles(int $team_id): array {
         $query = $this->connection->prepare("
+            SELECT u.user_id, u.firstname, u.lastname, u.email, 'admin' AS role
+            FROM teams t
+            INNER JOIN users u ON t.owner_id = u.user_id
+            WHERE t.team_id = ?
+            UNION
             SELECT u.user_id, u.firstname, u.lastname, u.email, tm.role
             FROM users u
             INNER JOIN team_members tm ON u.user_id = tm.user_id
-            WHERE tm.team_id = ?
-            ORDER BY tm.role DESC, u.firstname ASC
+            WHERE tm.team_id = ? AND tm.user_id <> (SELECT owner_id FROM teams WHERE team_id = ?)
+            ORDER BY role DESC, firstname ASC
         ");
-        $query->execute([$team_id]);
+        $query->execute([$team_id, $team_id, $team_id]);
         $members = [];
 
         while ($row = $query->fetch()) {
@@ -208,11 +252,23 @@ class TeamRepository extends Repository {
 
     /* Create invitation */
     public function createInvitation(int $team_id, int $invited_user_id, int $invited_by): bool {
-        $query = $this->connection->prepare("
-            INSERT INTO team_invitations (team_id, invited_user_id, invited_by)
-            VALUES (?, ?, ?)
-        ");
-        return $query->execute([$team_id, $invited_user_id, $invited_by]);
+        try {
+            $query = $this->connection->prepare("
+                INSERT INTO team_invitations (team_id, invited_user_id, invited_by)
+                VALUES (?, ?, ?)
+            ");
+            if (!$query) {
+                throw new \Exception("Failed to prepare invitation insert query: " . implode(", ", $this->connection->errorInfo()));
+            }
+            $result = $query->execute([$team_id, $invited_user_id, $invited_by]);
+            if (!$result) {
+                throw new \Exception("Failed to execute invitation insert: " . implode(", ", $query->errorInfo()));
+            }
+            return true;
+        } catch (\Exception $e) {
+            error_log("createInvitation error: " . $e->getMessage());
+            return false;
+        }
     }
 
     /* Get invitation by ID */

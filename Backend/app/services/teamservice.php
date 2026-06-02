@@ -22,7 +22,11 @@ class TeamService {
         $team->team_name = $team_name;
         $team->description = $description;
         $team->owner_id = $owner_id;
-        return $this->teamRepository->createTeam($team);
+        $team_id = $this->teamRepository->createTeam($team);
+        if ($team_id !== null) {
+            $this->teamRepository->addTeamMember($team_id, $owner_id, 'admin');
+        }
+        return $team_id;
     }
 
     /* Get team by ID */
@@ -110,7 +114,8 @@ class TeamService {
         if (!$this->isMember($team_id, $invited_by)) throw new \Exception("You are not a member of this team");
         if ($this->isMember($team_id, $invited_user_id)) throw new \Exception("User is already a member of this team");
         if ($this->teamRepository->hasPendingInvitation($team_id, $invited_user_id)) throw new \Exception("A pending invitation already exists for this user");
-        $this->teamRepository->createInvitation($team_id, $invited_user_id, $invited_by);
+        $success = $this->teamRepository->createInvitation($team_id, $invited_user_id, $invited_by);
+        if (!$success) throw new \Exception("Failed to create invitation");
     }
 
     /* Get pending invitations for a user */

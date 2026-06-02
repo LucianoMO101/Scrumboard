@@ -8,7 +8,7 @@ START TRANSACTION;
 SET time_zone = "+00:00";
 
 -- ============================================
--- TABLE: USERS
+-- TABLE: USERS (without default_team_id FK yet)
 -- ============================================
 CREATE TABLE IF NOT EXISTS `users` (
   `user_id` INT(11) NOT NULL AUTO_INCREMENT,
@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `email` VARCHAR(255) NOT NULL UNIQUE,
   `password` VARCHAR(255) NOT NULL,
   `refresh_token` VARCHAR(500) NULL,
+  `default_team_id` INT(11) NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`user_id`),
@@ -37,6 +38,10 @@ CREATE TABLE IF NOT EXISTS `teams` (
   FOREIGN KEY (`owner_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE,
   INDEX `idx_owner_id` (`owner_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Add the default_team_id foreign key to users after teams is created
+ALTER TABLE `users` ADD CONSTRAINT `fk_users_default_team` 
+  FOREIGN KEY (`default_team_id`) REFERENCES `teams` (`team_id`) ON DELETE SET NULL;
 
 -- ============================================
 -- TABLE: TEAM_MEMBERS (Many-to-Many)

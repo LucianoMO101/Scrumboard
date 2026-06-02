@@ -30,6 +30,53 @@
         {{ teamStore.error }}
       </div>
 
+      <!-- Pending Invitations Section -->
+      <div v-if="teamStore.invitations.length > 0" class="mb-12">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+          <span class="text-2xl">📨</span>
+          Pending Team Invitations
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div
+            v-for="invitation in teamStore.invitations"
+            :key="invitation.invitation_id"
+            class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl shadow-md border-2 border-amber-200 p-6 hover:shadow-lg transition"
+          >
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-amber-200 text-amber-700 rounded-lg flex items-center justify-center text-lg font-bold">
+                  {{ invitation.team_name.charAt(0).toUpperCase() }}
+                </div>
+                <div>
+                  <h3 class="text-lg font-bold text-gray-800">{{ invitation.team_name }}</h3>
+                  <span class="text-xs text-gray-600">Invited by {{ invitation.invited_by_name || 'Team Owner' }}</span>
+                </div>
+              </div>
+              <span class="px-3 py-1 bg-amber-200 text-amber-900 text-xs font-semibold rounded-full">Pending</span>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">
+              {{ invitation.team_description || 'No description provided.' }}
+            </p>
+            <div class="flex gap-3">
+              <button
+                @click="acceptTeamInvitation(invitation.invitation_id)"
+                :disabled="teamStore.isLoading"
+                class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition disabled:opacity-50"
+              >
+                ✓ Accept
+              </button>
+              <button
+                @click="declineTeamInvitation(invitation.invitation_id)"
+                :disabled="teamStore.isLoading"
+                class="flex-1 border border-red-300 hover:bg-red-50 text-red-600 py-2 rounded-lg font-medium transition disabled:opacity-50"
+              >
+                ✕ Decline
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Teams Grid -->
       <div
         v-if="!teamStore.isLoading && teamStore.teams.length > 0"
@@ -152,6 +199,7 @@ const newTeam = ref({ team_name: '', description: '' })
 
 onMounted(async () => {
   await teamStore.fetchMyTeams()
+  await teamStore.fetchMyInvitations()
 })
 
 function goToTeam(id) {
@@ -170,6 +218,20 @@ async function handleCreateTeam() {
     newTeam.value = { team_name: '', description: '' }
   } else {
     formError.value = teamStore.error || 'Failed to create team'
+  }
+}
+
+async function acceptTeamInvitation(invitationId) {
+  const success = await teamStore.acceptInvitation(invitationId)
+  if (success) {
+    // Invitations list will be updated automatically by the store
+  }
+}
+
+async function declineTeamInvitation(invitationId) {
+  const success = await teamStore.declineInvitation(invitationId)
+  if (success) {
+    // Invitations list will be updated automatically by the store
   }
 }
 </script>

@@ -1,0 +1,55 @@
+Requirements Web Development 2 (Course 2.3)
+Docent: M. de Haan
+
+Studiepunten: 4 EC
+
+1. Algemene Voorwaarden (De 'Pass' Drempel)
+Voordat de rubrics worden gescoord, moet de opdracht aan de volgende basisvoorwaarden voldoen om überhaupt nagekeken te worden:
+- Authenticiteit: De applicatie moet een authentieke use-case hebben die door de student zelf is geformuleerd.
+- Originaliteit: De kennis uit de colleges moet zijn uitgebreid met originele functionaliteit (niet alleen de college-code kopiëren).
+- Communicatie: Het voorstel voor de applicatie moet schriftelijk en duidelijk zijn gecommuniceerd naar de docent.
+- Belangrijk: Je moet op elk onderdeel minimaal 1 punt scoren. Als je op één onderdeel 0 punten scoort, is je maximale eindcijfer een 5.
+
+2. Puntenverdeling per Rubric
+A. CSS & Styling
+- 1 Punt:
+    - De applicatie is gestyled met een CSS framework.
+    - De look & feel is consistent met slechts kleine foutjes.
+
+- 2 Punten:
+    - De applicatie is gestyled met een CSS- of component-framework.
+    - De look & feel is consistent en esthetisch aantrekkelijk.
+    - De applicatie is volledig responsive (werkt goed op smartphone, tablet, laptop en desktop).
+
+B. Frontend Component Architecture
+- 1 Punt:
+    - De frontend is verdeeld in verschillende componenten die een logische structuur volgen.
+
+- 2 Punten:
+    - Componenten volgen een logische structuur.
+    - Er wordt gebruikgemaakt van routing voor navigatie tussen componenten.
+    - State management is geïmplementeerd in de applicatie.
+
+C. Backend RESTful API
+- 1 Punt:
+    - Werkende GET, POST, PUT en DELETE endpoints.
+    - Naamgeving van endpoints volgt de standaard.
+    - Het POST endpoint geeft het nieuwe object terug, inclusief het nieuwe ID.
+
+- 2 Punten:
+    - Volledige naleving van REST best practices.
+    - De GET endpoints ondersteunen filtering en paginering.
+    - Alle endpoints geven duidelijke foutmeldingen (error messages) als er iets misgaat.
+
+D. Authenticatie & Backend Architectuur
+- 1 Punt:
+    - Authenticatie is correct geïmplementeerd via JWT (token bij login en bij elk volgend request).
+    - De backend code volgt het MVC-patroon.
+    - Er wordt gebruikgemaakt van routing, namespaces en autoloading.
+
+- 2 Punten:
+    - Alle eisen van 1 punt.
+    - Autorisatie op basis van rollen: Gebruikers kunnen verschillende rollen hebben en de backend controleert of een rol toegang heeft tot specifieke acties.
+
+Berekening eindcijfer:
+Het eindcijfer is de som van alle behaalde punten (maximaal 10), mits op elk onderdeel minimaal 1 punt is gescoord.
