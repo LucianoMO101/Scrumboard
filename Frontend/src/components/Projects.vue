@@ -102,7 +102,49 @@
         </div>
         <div class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Team (optional)</label>
+            <div class="relative">
+              <input
+                v-model="teamSearch"
+                type="text"
+                placeholder="Search your teams or leave empty for default team..."
+                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                @focus="showTeamDropdown = true"
+                @blur="hideTeamDropdownDelayed"
+              />
+              <div v-if="newProject.teamId" class="mt-1 flex items-center gap-2">
+                <span class="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
+                  {{ selectedTeamName }}
+                  <button @click.prevent="clearTeam" class="ml-1 hover:text-blue-900">&times;</button>
+                </span>
+              </div>
+              <ul
+                v-if="showTeamDropdown && filteredTeams.length > 0"
+                class="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-xl mt-1 max-h-48 overflow-y-auto"
+              >
+                <li
+                  v-for="team in filteredTeams"
+                  :key="team.team_id"
+                  @mousedown.prevent="selectTeam(team)"
+                  class="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-800 flex items-center gap-2"
+                >
+                  <span class="w-6 h-6 bg-green-100 text-green-700 rounded font-bold text-xs flex items-center justify-center flex-shrink-0">
+                    {{ team.team_name.charAt(0).toUpperCase() }}
+                  </span>
+                  {{ team.team_name }}
+                </li>
+              </ul>
+              <div
+                v-if="showTeamDropdown && filteredTeams.length === 0"
+                class="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-xl mt-1 px-4 py-3 text-sm text-gray-500"
+              >
+                No matching teams found.
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Project Name *</label>
             <input
               v-model="newProject.projectName"
               type="text"
@@ -143,22 +185,52 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '@/stores/ProjectStore'
 import { useAuthStore } from '@/stores/AuthStore'
+import { useTeamStore } from '@/stores/TeamStore'
 
 const router = useRouter()
 const projectStore = useProjectStore()
 const authStore = useAuthStore()
+const teamStore = useTeamStore()
 
 const showNewProjectModal = ref(false)
 const isCreating = ref(false)
 const createError = ref('')
+const teamSearch = ref('')
+const showTeamDropdown = ref(false)
 const newProject = ref({
   projectName: '',
   description: '',
+  teamId: null,
 })
+
+const filteredTeams = computed(() => {
+  const q = teamSearch.value.toLowerCase().trim()
+  return teamStore.teams.filter((t) => !q || t.team_name.toLowerCase().includes(q))
+})
+
+const selectedTeamName = computed(() => {
+  const t = teamStore.teams.find((team) => team.team_id === newProject.value.teamId)
+  return t ? t.team_name : ''
+})
+
+const selectTeam = (team) => {
+  newProject.value.teamId = team.team_id
+  teamSearch.value = ''
+  showTeamDropdown.value = false
+}
+
+const clearTeam = () => {
+  newProject.value.teamId = null
+  teamSearch.value = ''
+}
+
+const hideTeamDropdownDelayed = () => {
+  setTimeout(() => { showTeamDropdown.value = false }, 150)
+}
 
 const goToProject = (projectId) => {
   router.push(`/sprint/${projectId}`)
@@ -173,19 +245,15 @@ const createProject = async () => {
   isCreating.value = true
   createError.value = ''
   
-  console.log('Creating project:', newProject.value)
-  
   try {
     const success = await projectStore.createProject(
       newProject.value.projectName,
       newProject.value.description,
-      authStore.user?.default_team_id || 1
+      newProject.value.teamId
     )
 
     if (success) {
-      showNewProjectModal.value = false
-      newProject.value = { projectName: '', description: '' }
-      createError.value = ''
+      closeModal()
     } else {
       createError.value = projectStore.error || 'Failed to create project'
     }
@@ -205,11 +273,17 @@ const deleteProject = async (projectId) => {
 
 const closeModal = () => {
   showNewProjectModal.value = false
-  newProject.value = { projectName: '', description: '' }
+  newProject.value = { projectName: '', description: '', teamId: null }
+  teamSearch.value = ''
+  showTeamDropdown.value = false
   createError.value = ''
 }
 
 onMounted(async () => {
+  if (!authStore.isLoggedIn) {
+    authStore.hydrate()
+  }
+  await teamStore.fetchMyTeams()
   await projectStore.fetchProjects()
 })
 </script>

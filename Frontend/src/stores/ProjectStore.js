@@ -65,11 +65,15 @@ export const useProjectStore = defineStore('project', {
       this.isLoading = true
       this.error = null
       try {
-        const response = await axios.post('/projects', {
+        const payload = {
           project_name: projectName,
           description,
-          team_id: teamId,
-        })
+        }
+        if (teamId !== null && teamId !== undefined && teamId !== '') {
+          payload.team_id = teamId
+        }
+
+        const response = await axios.post('/projects', payload)
         const newProject = response.data.data
         if (newProject) {
           this.projects.push(newProject)

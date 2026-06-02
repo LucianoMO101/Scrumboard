@@ -184,12 +184,12 @@
           <div class="space-y-4">
             <!-- Team selector -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Team *</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Team (optional)</label>
               <div class="relative">
                 <input
                   v-model="teamSearch"
                   type="text"
-                  placeholder="Search your teams..."
+                  placeholder="Search your teams or leave empty for default team..."
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   @focus="showTeamDropdown = true"
                   @blur="hideTeamDropdownDelayed"
@@ -203,11 +203,11 @@
                 </div>
                 <!-- Dropdown -->
                 <ul
-                  v-if="showTeamDropdown && filteredAdminTeams.length > 0"
+                  v-if="showTeamDropdown && filteredTeams.length > 0"
                   class="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-xl mt-1 max-h-48 overflow-y-auto"
                 >
                   <li
-                    v-for="team in filteredAdminTeams"
+                    v-for="team in filteredTeams"
                     :key="team.team_id"
                     @mousedown.prevent="selectTeam(team)"
                     class="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm text-gray-800 flex items-center gap-2"
@@ -216,14 +216,13 @@
                       {{ team.team_name.charAt(0).toUpperCase() }}
                     </span>
                     {{ team.team_name }}
-                    <span class="ml-auto text-xs text-gray-400">admin</span>
                   </li>
                 </ul>
                 <div
-                  v-if="showTeamDropdown && filteredAdminTeams.length === 0"
+                  v-if="showTeamDropdown && filteredTeams.length === 0"
                   class="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-xl mt-1 px-4 py-3 text-sm text-gray-500"
                 >
-                  No teams where you are admin. <RouterLink to="/teams" class="text-blue-600 underline">Create a team first.</RouterLink>
+                  No matching teams found.
                 </div>
               </div>
             </div>
@@ -251,7 +250,7 @@
             <div class="flex gap-2 pt-2">
               <button
                 @click="createProject"
-                :disabled="!newProject.projectName || !newProject.teamId || isCreating"
+                :disabled="!newProject.projectName || isCreating"
                 class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 transition"
               >
                 {{ isCreating ? 'Creating...' : 'Create Project' }}
@@ -303,9 +302,9 @@ const newProject = ref({
   teamId: null,
 })
 
-const filteredAdminTeams = computed(() => {
+const filteredTeams = computed(() => {
   const q = teamSearch.value.toLowerCase().trim()
-  return teamStore.adminTeams.filter((t) =>
+  return teamStore.teams.filter((t) =>
     !q || t.team_name.toLowerCase().includes(q)
   )
 })
@@ -359,11 +358,6 @@ const createProject = async () => {
     createError.value = 'Project name is required'
     return
   }
-  if (!newProject.value.teamId) {
-    createError.value = 'Please select a team'
-    return
-  }
-
   isCreating.value = true
   createError.value = ''
 

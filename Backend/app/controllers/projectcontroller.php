@@ -6,6 +6,7 @@ use Exception;
 use Services\ProjectService;
 use Services\ProjectRoleService;
 use Services\ActivityLogService;
+use Services\UserService;
 use Models\ProjectRole;
 
 class ProjectController extends Controller {
@@ -13,12 +14,14 @@ class ProjectController extends Controller {
     private $projectService;
     private $projectRoleService;
     private $activityLogService;
+    private $userService;
 
     public function __construct() {
         parent::__construct();
         $this->projectService = new ProjectService();
         $this->projectRoleService = new ProjectRoleService();
         $this->activityLogService = new ActivityLogService();
+        $this->userService = new UserService();
     }
 
     /* GET /projects and Get all projects for authenticated user */
@@ -111,14 +114,26 @@ class ProjectController extends Controller {
 
             $data = $this->getJsonData();
 
-            if (empty($data['project_name']) || empty($data['team_id'])) {
-                $this->respondWithError(400, "Project name and team ID are required");
+            if (empty($data['project_name'])) {
+                $this->respondWithError(400, "Project name is required");
+            }
+
+            $team_id = null;
+            if (isset($data['team_id']) && $data['team_id'] !== '' && $data['team_id'] !== null) {
+                $team_id = (int)$data['team_id'];
+            } else {
+                $user = $this->userService->getUserById($user_id);
+                $team_id = $user?->default_team_id;
+            }
+
+            if (empty($team_id)) {
+                $this->respondWithError(400, "No team selected and no default team available");
             }
 
             $project_id = $this->projectService->createProject(
                 $data['project_name'],
                 $data['description'] ?? '',
-                (int)$data['team_id'],
+                (int)$team_id,
                 $user_id
             );
 
