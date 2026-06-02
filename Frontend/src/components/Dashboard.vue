@@ -191,6 +191,7 @@
                   type="text"
                   placeholder="Search your teams or leave empty for default team..."
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  @input="handleTeamInput"
                   @focus="showTeamDropdown = true"
                   @blur="hideTeamDropdownDelayed"
                 />
@@ -323,6 +324,13 @@ function selectTeam(team) {
 function clearTeam() {
   newProject.value.teamId = null
   teamSearch.value = ''
+}
+
+function handleTeamInput() {
+  // When the user types a custom value, drop the previous selection.
+  if (newProject.value.teamId !== null) {
+    newProject.value.teamId = null
+  }
 }
 
 function hideTeamDropdownDelayed() {

@@ -109,6 +109,7 @@
                 type="text"
                 placeholder="Search your teams or leave empty for default team..."
                 class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                @input="handleTeamInput"
                 @focus="showTeamDropdown = true"
                 @blur="hideTeamDropdownDelayed"
               />
@@ -226,6 +227,13 @@ const selectTeam = (team) => {
 const clearTeam = () => {
   newProject.value.teamId = null
   teamSearch.value = ''
+}
+
+const handleTeamInput = () => {
+  // Keep only explicit dropdown selections as valid team choices.
+  if (newProject.value.teamId !== null) {
+    newProject.value.teamId = null
+  }
 }
 
 const hideTeamDropdownDelayed = () => {

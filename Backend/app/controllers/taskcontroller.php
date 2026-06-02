@@ -198,8 +198,13 @@ class TaskController extends Controller {
                 $this->respondWithError(403, "You need editor or owner role to create tasks");
             }
 
+            $sprint_id = null;
+            if (array_key_exists('sprint_id', $data) && $data['sprint_id'] !== '' && $data['sprint_id'] !== null && $data['sprint_id'] !== 'null') {
+                $sprint_id = (int)$data['sprint_id'];
+            }
+
             $task_id = $this->taskService->createTask(
-                isset($data['sprint_id']) ? (int)$data['sprint_id'] : null,
+                $sprint_id,
                 (int)$data['project_id'],
                 $data['task_name'],
                 $data['description'] ?? '',
@@ -267,13 +272,18 @@ class TaskController extends Controller {
                 $this->respondWithError(400, "Task name is required");
             }
 
+            $sprint_id = null;
+            if (array_key_exists('sprint_id', $data) && $data['sprint_id'] !== '' && $data['sprint_id'] !== null && $data['sprint_id'] !== 'null') {
+                $sprint_id = (int)$data['sprint_id'];
+            }
+
             $success = $this->taskService->updateTask(
                 (int)$task_id,
                 $data['task_name'],
                 $data['description'] ?? '',
                 $data['assigned_to'] ?? null,
                 $user_id,
-                isset($data['sprint_id']) ? (int)$data['sprint_id'] : null,
+                $sprint_id,
                 $data['status'] ?? ''
             );
 

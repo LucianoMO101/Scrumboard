@@ -42,27 +42,37 @@
           <button
             v-if="isOwner && member.user_id !== currentUserId"
             @click="removeMember(member)"
+            :disabled="removeLoadingUserId === member.user_id"
             class="text-xs text-red-400 hover:text-red-600 transition"
             title="Remove from project"
-          >&times;</button>
+          >{{ removeLoadingUserId === member.user_id ? '...' : 'Remove' }}</button>
         </div>
       </li>
     </ul>
 
     <!-- Add member section (owner only) -->
     <div v-if="isOwner" class="border-t pt-3">
-      <p class="text-xs font-semibold text-gray-600 mb-2">Add team member to project</p>
+      <p class="text-xs font-semibold text-gray-600 mb-1">Add team member to project</p>
+      <p class="text-xs text-gray-400 mb-2">
+        Source team: <span class="font-medium text-gray-600">{{ teamName || `Team #${props.teamId}` }}</span>
+      </p>
+      <input
+        v-model="memberSearch"
+        type="text"
+        placeholder="Search team members..."
+        class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
       <div class="flex gap-2">
         <select
           v-model="selectedUserId"
-          class="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="flex-1 border border-gray-300 bg-white text-gray-900 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Select team member…</option>
           <option
-            v-for="tm in availableTeamMembers"
+            v-for="tm in filteredAvailableTeamMembers"
             :key="tm.user_id"
             :value="tm.user_id"
-          >{{ tm.name }}</option>
+          >{{ tm.label }}</option>
         </select>
         <select
           v-model="selectedRole"
@@ -75,8 +85,14 @@
           @click="addMember"
           :disabled="!selectedUserId || addLoading"
           class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
-        >{{ addLoading ? '...' : 'Add' }}</button>
+        >{{ addLoading ? 'Adding...' : 'Add To Project' }}</button>
       </div>
+      <p v-if="filteredAvailableTeamMembers.length > 0" class="text-xs text-gray-500 mt-1">
+        {{ filteredAvailableTeamMembers.length }} team member{{ filteredAvailableTeamMembers.length === 1 ? '' : 's' }} available to add.
+      </p>
+      <p v-else class="text-xs text-gray-400 mt-1">
+        No matching team members found to add.
+      </p>
       <p v-if="errorMsg" class="text-xs text-red-500 mt-1">{{ errorMsg }}</p>
     </div>
   </div>
@@ -95,15 +111,26 @@ const props = defineProps({
 const emit = defineEmits(['members-changed'])
 
 const authStore = useAuthStore()
-const currentUserId = computed(() => authStore.user?.user_id ?? parseInt(localStorage.getItem('userId')))
+const currentUserId = computed(() => {
+  if (authStore.user?.user_id) return authStore.user.user_id
+  try {
+    const storedUser = JSON.parse(localStorage.getItem('user') || 'null')
+    return storedUser?.user_id ?? null
+  } catch {
+    return null
+  }
+})
 
 const members = ref([])
 const teamMembers = ref([])
+const teamName = ref('')
 const isLoading = ref(false)
 const addLoading = ref(false)
+const removeLoadingUserId = ref(null)
 const errorMsg = ref('')
 const selectedUserId = ref('')
 const selectedRole = ref('viewer')
+const memberSearch = ref('')
 
 const isOwner = computed(() => {
   const me = members.value.find((m) => m.user_id === currentUserId.value)
@@ -114,6 +141,11 @@ const isOwner = computed(() => {
 const availableTeamMembers = computed(() => {
   const memberIds = new Set(members.value.map((m) => m.user_id))
   return teamMembers.value.filter((tm) => !memberIds.has(tm.user_id))
+})
+
+const filteredAvailableTeamMembers = computed(() => {
+  const q = memberSearch.value.toLowerCase().trim()
+  return availableTeamMembers.value.filter((tm) => !q || tm.name.toLowerCase().includes(q))
 })
 
 const fetchMembers = async () => {
@@ -131,11 +163,16 @@ const fetchMembers = async () => {
 const fetchTeamMembers = async () => {
   try {
     const res = await axios.get(`/teams/${props.teamId}`)
+    teamName.value = res.data.data?.team_name || ''
     teamMembers.value = (res.data.data?.members || []).map((m) => ({
       user_id: m.user_id,
       name: m.name || (m.firstname && m.lastname ? `${m.firstname} ${m.lastname}` : m.email || `User ${m.user_id}`),
+      email: m.email || '',
+      role: m.role || 'member',
+      label: `${m.name || (m.firstname && m.lastname ? `${m.firstname} ${m.lastname}` : m.email || `User ${m.user_id}`)}${m.email ? ` (${m.email})` : ''} - ${m.role || 'member'}`,
     }))
   } catch {
+    teamName.value = ''
     // ignore
   }
 }
@@ -176,11 +213,14 @@ const changeRole = async (targetUserId, newRole) => {
 const removeMember = async (member) => {
   if (!confirm(`Remove ${member.user_name || 'this user'} from the project?`)) return
   try {
+    removeLoadingUserId.value = member.user_id
     await axios.delete(`/projects/${props.projectId}/members/${member.user_id}`)
     await fetchMembers()
     emit('members-changed')
   } catch (err) {
     alert(err.response?.data?.error || 'Failed to remove member')
+  } finally {
+    removeLoadingUserId.value = null
   }
 }
 
@@ -204,10 +244,16 @@ const roleBadgeClass = (role) => {
 }
 
 onMounted(async () => {
+  if (!authStore.user) {
+    authStore.hydrate()
+  }
   await Promise.all([fetchMembers(), fetchTeamMembers()])
 })
 
-watch(() => props.projectId, async () => {
+watch(() => [props.projectId, props.teamId], async () => {
+  selectedUserId.value = ''
+  selectedRole.value = 'viewer'
+  memberSearch.value = ''
   await Promise.all([fetchMembers(), fetchTeamMembers()])
 })
 </script>

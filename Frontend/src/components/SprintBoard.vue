@@ -160,7 +160,7 @@
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       @click.self="showMembersModal = false"
     >
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[90vh]">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 flex flex-col max-h-[90vh]">
         <div class="flex items-center justify-between px-6 py-4 border-b">
           <h2 class="text-lg font-bold text-gray-800">Project Members</h2>
           <button @click="showMembersModal = false" class="text-gray-400 hover:text-gray-700 text-2xl leading-none">&times;</button>
